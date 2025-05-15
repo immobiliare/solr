@@ -41,6 +41,7 @@ import org.apache.solr.common.util.SimpleOrderedMap;
 import org.apache.solr.schema.FieldType;
 import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.DocSet;
+import org.apache.solr.search.WrappedQuery;
 import org.apache.solr.search.facet.SlotAcc.SlotContext;
 import org.apache.solr.search.facet.SlotAcc.SweepableSlotAcc;
 import org.apache.solr.search.facet.SlotAcc.SweepingCountSlotAcc;
@@ -489,7 +490,13 @@ abstract class FacetFieldProcessor extends FacetProcessor<FacetField> {
       slot.bucketVal = bucketValFromSlotNumFunc.apply(slot.slot);
 
       if (needFilter || null != this.resort) {
+
         slot.bucketFilter = makeBucketQuery(fieldQueryValFunc.apply(slot.bucketVal));
+        if(!fcontext.cache){
+          WrappedQuery q = new WrappedQuery(slot.bucketFilter);
+          q.setCache(false);
+          slot.bucketFilter = q;
+        }
       }
     }
 
