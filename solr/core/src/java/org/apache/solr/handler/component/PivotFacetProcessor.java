@@ -44,6 +44,7 @@ import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.DocSet;
 import org.apache.solr.search.SolrIndexSearcher;
 import org.apache.solr.search.SyntaxError;
+import org.apache.solr.search.WrappedQuery;
 import org.apache.solr.util.PivotListEntry;
 
 /** Processes all Pivot facet logic for a single node -- both non-distrib, and per-shard */
@@ -402,6 +403,12 @@ public class PivotFacetProcessor extends SimpleFacets {
       return base.andNotSize(hasVal);
     } else {
       Query query = ft.getFieldTermQuery(null, field, pivotValue);
+	  boolean useCache = Boolean.parseBoolean(params.get(FacetParams.FACET + ".useCache","false"));
+	  if(!useCache){
+		  WrappedQuery nocacheQuery = new WrappedQuery(query);
+		  nocacheQuery.setCache(false);
+		  query = nocacheQuery;
+	  }
       return searcher.numDocs(query, base);
     }
   }
@@ -421,6 +428,12 @@ public class PivotFacetProcessor extends SimpleFacets {
       return base.andNot(hasVal);
     } else {
       Query query = ft.getFieldTermQuery(null, field, pivotValue);
+	  boolean useCache = Boolean.parseBoolean(params.get(FacetParams.FACET + ".useCache","false"));
+	  if(!useCache){
+		  WrappedQuery nocacheQuery = new WrappedQuery(query);
+		  nocacheQuery.setCache(false);
+		  query = nocacheQuery;
+	  }
       return searcher.getDocSet(query, base);
     }
   }
