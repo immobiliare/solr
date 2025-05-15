@@ -74,16 +74,7 @@ import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.schema.FieldType;
 import org.apache.solr.schema.SchemaField;
 import org.apache.solr.schema.StrField;
-import org.apache.solr.search.CollapsingQParserPlugin;
-import org.apache.solr.search.DocIterator;
-import org.apache.solr.search.DocList;
-import org.apache.solr.search.DocSlice;
-import org.apache.solr.search.QParser;
-import org.apache.solr.search.QueryUtils;
-import org.apache.solr.search.ReturnFields;
-import org.apache.solr.search.SolrIndexSearcher;
-import org.apache.solr.search.SortSpecParsing;
-import org.apache.solr.search.SyntaxError;
+import org.apache.solr.search.*;
 import org.apache.solr.util.SolrResponseUtil;
 import org.apache.solr.util.plugin.PluginInfoInitialized;
 
@@ -327,6 +318,7 @@ public class ExpandComponent extends SearchComponent implements PluginInfoInitia
       int count = ordBytes.size();
       if (count > 0 && count < 200) {
         groupQuery = getGroupQuery(field, count, ordBytes);
+
       }
     } else {
       groupSet = new LongHashSet(docList.size());
@@ -428,8 +420,14 @@ public class ExpandComponent extends SearchComponent implements PluginInfoInitia
     }
 
     if (groupQuery != null) {
+      boolean useCache = Boolean.parseBoolean(req.getParams().get(ExpandParams.EXPAND_USE_CACHE, "true"));
+
       // Limits the results to documents that are in the same group as the documents in the page.
-      newFilters.add(groupQuery);
+      ExtendedQuery eq = new WrappedQuery(groupQuery);
+      if(!useCache){
+        eq.setCache(false);
+      }
+      newFilters.add((Query)eq);
     }
 
     SolrIndexSearcher.ProcessedFilter pfilter = searcher.getProcessedFilter(null, newFilters);
