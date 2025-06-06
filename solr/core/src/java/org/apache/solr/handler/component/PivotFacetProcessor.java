@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.util.BytesRefBuilder;
+import org.apache.solr.client.solrj.request.json.JsonFacetMap;
+import org.apache.solr.client.solrj.request.json.JsonQueryRequest;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.SolrException.ErrorCode;
 import org.apache.solr.common.StringUtils;
@@ -45,6 +47,7 @@ import org.apache.solr.search.DocSet;
 import org.apache.solr.search.SolrIndexSearcher;
 import org.apache.solr.search.SyntaxError;
 import org.apache.solr.search.WrappedQuery;
+import org.apache.solr.search.facet.FacetField;
 import org.apache.solr.util.PivotListEntry;
 
 /** Processes all Pivot facet logic for a single node -- both non-distrib, and per-shard */
@@ -403,14 +406,22 @@ public class PivotFacetProcessor extends SimpleFacets {
       return base.andNotSize(hasVal);
     } else {
       Query query = ft.getFieldTermQuery(null, field, pivotValue);
-	  boolean useCache = Boolean.parseBoolean(params.get(FacetParams.FACET + ".useCache","false"));
-	  if(!useCache){
+      if(!isFacetUseCache(field)){
 		  WrappedQuery nocacheQuery = new WrappedQuery(query);
 		  nocacheQuery.setCache(false);
 		  query = nocacheQuery;
 	  }
       return searcher.numDocs(query, base);
     }
+  }
+
+  private boolean isFacetUseCache(SchemaField field) {
+    String facetFieldCacheParam = "f." + field.getName() + "." + FacetParams.FACET + ".useCache";
+    boolean fieldFacetCache = Boolean.parseBoolean(params.get(facetFieldCacheParam, "true"));
+    if(!fieldFacetCache){
+      return false;
+    }
+    return Boolean.parseBoolean(params.get( FacetParams.FACET + ".useCache", "true"));
   }
 
   /**
@@ -421,6 +432,8 @@ public class PivotFacetProcessor extends SimpleFacets {
    * @param pivotValue String representation of the value, may be null (ie: "missing")
    */
   private DocSet getSubset(DocSet base, SchemaField field, String pivotValue) throws IOException {
+    JsonQueryRequest r = new JsonQueryRequest();
+
     FieldType ft = field.getType();
     if (null == pivotValue) {
       Query query = ft.getRangeQuery(null, field, null, null, false, false);
@@ -428,8 +441,7 @@ public class PivotFacetProcessor extends SimpleFacets {
       return base.andNot(hasVal);
     } else {
       Query query = ft.getFieldTermQuery(null, field, pivotValue);
-	  boolean useCache = Boolean.parseBoolean(params.get(FacetParams.FACET + ".useCache","false"));
-	  if(!useCache){
+	  if(!isFacetUseCache(field)){
 		  WrappedQuery nocacheQuery = new WrappedQuery(query);
 		  nocacheQuery.setCache(false);
 		  query = nocacheQuery;
