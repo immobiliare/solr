@@ -1,0 +1,22 @@
+name: Create Pre-release
+
+on:
+  push:
+    tags:
+      - '*-beta*'
+      - '*-rc*'
+
+jobs:
+  create_pre_release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
