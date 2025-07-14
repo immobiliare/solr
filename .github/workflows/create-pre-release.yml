@@ -1,4 +1,4 @@
-name: Create Pre-release
+name: Build and Pre-release
 
 on:
   push:
@@ -7,16 +7,39 @@ on:
       - '*-rc*'
 
 jobs:
-  create_pre_release:
+  build:
+    name: Build with Gradle and Create Pre-release
     runs-on: ubuntu-latest
 
     steps:
+      - name: Set up Gradle
+        uses: gradle/gradle-build-action@v3
+        with:
+          gradle-version: 7.2
+
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Create GitHub Release
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin' # o adopt/openjdk, ecc.
+          java-version: '11'      # metti qui la versione richiesta dal tuo progetto
+
+      - name: Grant execute permission to Gradle wrapper
+        run: chmod +x ./gradlew
+
+      - name: Extract Git tag
+        id: get_tag
+        run: echo "RELEASE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
+      - name: Build with Gradle
+        run: ./gradlew -Dversion.suffix=immo-${{ env.RELEASE_TAG }} clean distTar
+
+      - name: Create GitHub Pre-release
         uses: softprops/action-gh-release@v2
         with:
           prerelease: true
+          files: solr/packaging/build/distributions/*.tgz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
